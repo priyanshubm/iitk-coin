@@ -1,0 +1,13 @@
+# github.com/dgrijalva/jwt-go v3.2.0+incompatible
+## explicit
+github.com/dgrijalva/jwt-go
+# github.com/joho/godotenv v1.3.0
+## explicit
+github.com/joho/godotenv
+# github.com/mattn/go-sqlite3 v1.14.7
+## explicit
+github.com/mattn/go-sqlite3
+# golang.org/x/crypto v0.0.0-20210513164829-c07d793c2f9a
+## explicit
+golang.org/x/crypto/bcrypt
+golang.org/x/crypto/blowfish
