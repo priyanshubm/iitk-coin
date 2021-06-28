@@ -1,12 +1,10 @@
 package jwtTokens
 
 import (
-	"database/sql"
 	"strconv"
 
-	"github.com/priyanshubm/iitk-coin/database"
-
 	_ "github.com/mattn/go-sqlite3"
+	"github.com/priyanshubm/iitk-coin/database"
 )
 
 func Get_hashed_password(rollno string) string {
@@ -22,7 +20,7 @@ func Get_hashed_password(rollno string) string {
 
 }
 
-func GetCoinsFromRollNo(rollno string) (int, error) {
+func GetCoinsFromRollNo(rollno string) (float64, error) {
 
 	statement, _ :=
 		database.Db.Prepare("CREATE TABLE IF NOT EXISTS bank (rollno TEXT PRIMARY KEY ,coins INT)")
@@ -31,7 +29,7 @@ func GetCoinsFromRollNo(rollno string) (int, error) {
 	sqlStatement := `SELECT coins FROM bank WHERE rollno= $1;`
 	row := database.Db.QueryRow(sqlStatement, rollno)
 
-	var coins int
+	var coins float64
 	err := row.Scan(&coins)
 
 	if err != nil {
@@ -41,14 +39,45 @@ func GetCoinsFromRollNo(rollno string) (int, error) {
 
 }
 
-func GetUserFromRollNo(rollno string) (*sql.Row, error) {
+func GetUserFromRollNo(rollno string) (string, string, error) {
 
-	sqlStatement := `SELECT name FROM user WHERE rollno= $1;`
+	sqlStatement := `SELECT name,account_type FROM user WHERE rollno= $1;`
 	row := database.Db.QueryRow(sqlStatement, rollno)
-	err := row.Scan(&rollno)
-
+	var userName string
+	var userType string
+	err := row.Scan(&userName, &userType)
 	if err != nil {
-		return nil, err
+		return "", "", err
 	}
-	return row, nil
+
+	return userName, userType, nil
+}
+
+func getItemFromId(item_id int) (float64, int, error) {
+	var cost float64
+	var available int
+
+	sqlStatement := `SELECT cost,available FROM items WHERE id= $1;`
+	row := database.Db.QueryRow(sqlStatement, strconv.Itoa(item_id))
+
+	err := row.Scan(&cost, &available)
+	if err != nil {
+		return 0, 0, err
+	}
+	return cost, available, nil
+}
+
+func GetNumEvents(rollno string) (int, error) { // returns the number of awards given to a user
+	var number int
+
+	sqlStatement := `SELECT COUNT(user)
+	FROM rewards
+	WHERE user = $1;`
+
+	row := database.Db.QueryRow(sqlStatement, rollno)
+	err := row.Scan(&number)
+	if err != nil {
+		return 0, err
+	}
+	return number, nil
 }

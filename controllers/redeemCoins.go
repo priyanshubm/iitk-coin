@@ -7,16 +7,16 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/priyanshubm/iitk-coin/jwtTokens"
+	"github.com/priyanshubm/iitk-coin/models"
 )
 
-type transferCoin struct {
-	Roll_no string  `json:"rollno"`
-	Amount  float64 `json:"amount"`
+type redeemCoinsData struct {
+	Item_id int `json:"itemid"`
 }
 
-func TransferCoinHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/transfercoin" {
-		resp := &serverResponse{
+func RedeemCoinsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/redeem" {
+		resp := &models.ServerResponse{
 			Message: "Page not found",
 		}
 		JsonRes, _ := json.Marshal(resp)
@@ -32,11 +32,10 @@ func TransferCoinHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	tokenFromUser := c.Value
-	userRollNo, _, _ := jwtTokens.ExtractTokenMetadata(tokenFromUser)
-
+	rollno, _, _ := jwtTokens.ExtractTokenMetadata(tokenFromUser)
 	w.Header().Set("Content-Type", "application/json")
 
-	resp := &serverResponse{
+	resp := &models.ServerResponse{
 		Message: "",
 	}
 
@@ -44,40 +43,41 @@ func TransferCoinHandler(w http.ResponseWriter, r *http.Request) {
 
 	case "POST":
 
-		var transferData transferCoin
+		var redeemData redeemCoinsData
 
-		err := json.NewDecoder(r.Body).Decode(&transferData)
+		err := json.NewDecoder(r.Body).Decode(&redeemData)
 		if err != nil {
 
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		transferTorollno := transferData.Roll_no
-		transferAmount := transferData.Amount
 
-		if transferTorollno == "" {
+		item_id := redeemData.Item_id
+
+		if rollno == "" {
 			w.WriteHeader(401)
-			resp.Message = "Please enter a roll number"
+			resp.Message = "Enter a roll number"
 			JsonRes, _ := json.Marshal(resp)
 			w.Write(JsonRes)
 			return
 		}
 
-		err, tax := jwtTokens.TransferCoinDb(userRollNo, transferTorollno, transferAmount) // withdraw from first user and transfer to second
+		coins, err := jwtTokens.RedeemCoinsDb(rollno, item_id) // withdraw from first user and transfer to second
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 
 		w.WriteHeader(http.StatusOK)
-		resp.Message = "Transaction of " + fmt.Sprintf("%.2f", transferAmount) + " Sucessfull !  Tax Decucted = " + fmt.Sprintf("%.2f", tax)
+
+		resp.Message = "Sucessfully redeemed item " + fmt.Sprintf("%d", item_id) + " Coins remaining are " + fmt.Sprintf("%.2f", coins)
 		JsonRes, _ := json.Marshal(resp)
 		w.Write(JsonRes)
 		return
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 
-		resp.Message = "only POST requests are supported"
+		resp.Message = "Only POST requests are supported"
 		JsonRes, _ := json.Marshal(resp)
 		w.Write(JsonRes)
 		return

@@ -1,25 +1,23 @@
 package jwtTokens
 
 import (
-	"log"
 	"os"
 	"time"
 
-	"github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go"
 	"github.com/joho/godotenv"
+	_ "github.com/mattn/go-sqlite3"
 )
 
-func Create_Token(userRollNo string) (string, time.Time, error) {
+func CreateToken(userRollNo string, userType string) (string, time.Time, error) {
 	var err error
-	//creating token
+	//Creating Access Token
 
-	err1 := godotenv.Load()
-	if err1 != nil {
-		log.Fatal("error loading .env file")
-	}
+	godotenv.Load()
 
 	atClaims := jwt.MapClaims{}
 	atClaims["authorized"] = true
+	atClaims["accountType"] = userType
 	atClaims["user_roll_no"] = userRollNo
 	expTime := time.Now().Add(time.Minute * 15)
 	atClaims["exp"] = expTime.Unix()

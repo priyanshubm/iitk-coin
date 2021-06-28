@@ -4,16 +4,17 @@ import (
 	"encoding/json"
 	"net/http"
 
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/priyanshubm/iitk-coin/jwtTokens"
-	"github.com/priyanshubm/iitk-coin/models"
 )
 
 func Secret_page(w http.ResponseWriter, r *http.Request) {
+	resp := &serverResponse{
+		Message: "",
+	}
 	if r.URL.Path != "/secretpage" {
 		w.WriteHeader(404)
-		resp := &models.ServerResponse{
-			Message: "error:404 Page not Found",
-		}
+		resp.Message = "Page not formed"
 		JsonRes, _ := json.Marshal(resp)
 		w.Write(JsonRes)
 		return
@@ -24,40 +25,38 @@ func Secret_page(w http.ResponseWriter, r *http.Request) {
 		c, err := r.Cookie("token")
 		if err != nil {
 			if err == http.ErrNoCookie {
+				// If the cookie is not set, return an unauthorized status
 				w.WriteHeader(http.StatusUnauthorized)
-				resp := &models.ServerResponse{
-					Message: "access denied, user not authorized",
-				}
+				resp.Message = "Access deined, user not authorized"
 				JsonRes, _ := json.Marshal(resp)
 				w.Write(JsonRes)
 
 				return
 			}
+			// For any other type of error, return a bad request status
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 		tokenFromUser := c.Value
-		user_roll_no, err := jwtTokens.Extract_data(tokenFromUser)
+		user_roll_no, Acctype, err := jwtTokens.ExtractTokenMetadata(tokenFromUser)
+
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
-			resp := &models.ServerResponse{
-				Message: "access denied",
-			}
+
+			resp.Message = "Access denied"
 			JsonRes, _ := json.Marshal(resp)
 			w.Write(JsonRes)
 			return
 		}
-		resp := &models.ServerResponse{
-			Message: "Welcome" + user_roll_no,
-		}
+
+		resp.Message = "Welcome to the secret page " + user_roll_no + " " + Acctype
 		JsonRes, _ := json.Marshal(resp)
 		w.Write(JsonRes)
 		return
 	default:
 		w.WriteHeader(http.StatusBadRequest)
-		resp := &models.ServerResponse{
-			Message: "invalid request, kindly enter a GET request ",
-		}
+
+		resp.Message = "only GET requests are supported "
 		JsonRes, _ := json.Marshal(resp)
 		w.Write(JsonRes)
 	}

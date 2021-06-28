@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
-	"strconv"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/priyanshubm/iitk-coin/jwtTokens"
@@ -15,12 +13,22 @@ import (
 func GetCoinsHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/getcoins" {
 		resp := &models.ServerResponse{
-			Message: "404 Page not found",
+			Message: "Page not found",
 		}
 		JsonRes, _ := json.Marshal(resp)
 		w.Write(JsonRes)
 		return
 	}
+	c, err := r.Cookie("token")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			// If the cookie is not set, return an unauthorized status
+			http.Error(w, "", http.StatusUnauthorized)
+			return
+		}
+	}
+	tokenFromUser := c.Value
+	rollno, _, _ := jwtTokens.ExtractTokenMetadata(tokenFromUser)
 	w.Header().Set("Content-Type", "application/json")
 
 	resp := &models.ServerResponse{
@@ -31,26 +39,6 @@ func GetCoinsHandler(w http.ResponseWriter, r *http.Request) {
 
 	case "GET":
 
-		var user models.User
-
-		err := json.NewDecoder(r.Body).Decode(&user)
-		if err != nil {
-
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		query, err := url.ParseQuery(r.URL.RawQuery)
-		_, ok := query["rollno"]
-
-		if err != nil || !ok {
-			w.WriteHeader(401)
-			resp.Message = "Bad request syntax(rollno missing or syntax error )"
-			JsonRes, _ := json.Marshal(resp)
-			w.Write(JsonRes)
-			return
-		}
-		rollno := query["rollno"][0]
 		coins, err := jwtTokens.GetCoinsFromRollNo(rollno)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -59,14 +47,14 @@ func GetCoinsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		resp.Message = "Your coins are " + strconv.Itoa(coins)
+		resp.Message = "Your coins are " + fmt.Sprintf("%f", coins)
 		JsonRes, _ := json.Marshal(resp)
 		w.Write(JsonRes)
 		return
 	default:
 		w.WriteHeader(http.StatusBadRequest)
 
-		resp.Message = "Sorry, only GET requests are supported"
+		resp.Message = "Only GET requests are supported"
 		JsonRes, _ := json.Marshal(resp)
 		w.Write(JsonRes)
 		return

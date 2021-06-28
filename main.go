@@ -17,6 +17,8 @@ func main() {
 	http.HandleFunc("/addcoins", controllers.AddCoinsHandler)
 	http.HandleFunc("/transfercoin", controllers.TransferCoinHandler)
 	http.HandleFunc("/getcoins", controllers.GetCoinsHandler)
+	http.HandleFunc("/redeem", controllers.RedeemCoinsHandler)
+	http.HandleFunc("/additems", controllers.AddItemsHandler)
 	log.Printf("Server is up on port 8080")
 	err := database.ConnectToDb()
 	if err != nil {

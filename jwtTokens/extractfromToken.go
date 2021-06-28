@@ -1,20 +1,22 @@
 package jwtTokens
 
 import (
-	"github.com/dgrijalva/jwt-go"
+	jwt "github.com/dgrijalva/jwt-go"
 )
 
-func Extract_data(user_token string) (string, error) {
+func ExtractTokenMetadata(user_token string) (string, string, error) { //returns the roll no of the user
 	token, err := Verify_Token(user_token)
 	if err != nil {
-		return " ", err
+		return "", "", err
 	}
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if ok {
+
 		roll_no, _ := claims["user_roll_no"].(string)
-		return roll_no, err
+		account_type, _ := claims["accountType"].(string)
+		return roll_no, account_type, err
 	}
 
-	return " ", err
+	return "", "", err
 
 }
