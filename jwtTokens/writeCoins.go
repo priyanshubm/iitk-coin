@@ -240,3 +240,79 @@ func WriteItemsToDb(item_id int, cost string, number int) (string, error) { // c
 	return "success", e
 
 }
+
+func RespondRedeemDb(request_id int, action string) (string, error) { //convert this into a transaction and add eror handling
+	// Check if the item id is valid and obtain the coist of the item
+
+	roll_no, item_id, status, err := GetItemFromRequest(request_id)
+	if status != "pending" {
+		return "Their is no such pending request", nil
+
+	}
+	if err != nil {
+		return "", err
+	}
+	cost, available, err := getItemFromId(item_id)
+	if err != nil {
+		return "", err
+	}
+	if available == 0 {
+		return "", errors.New("item not available You can not accept this request now , try later")
+	}
+
+	coins, _ := GetCoinsFromRollNo(roll_no)
+	if coins < cost {
+		return "", errors.New("insufficient coins to claim this item ")
+	}
+	if action == "accept" {
+		var options = sql.TxOptions{
+			Isolation: sql.LevelSerializable,
+		}
+		tx, err := database.Db.BeginTx(context.Background(), &options)
+		if err != nil {
+			_ = tx.Rollback()
+			log.Fatal(err)
+			return "", err
+		}
+
+		res, err := tx.Exec(`UPDATE bank SET coins = coins - ? WHERE rollno= ? AND coins - ? >=0 `, cost, roll_no, cost)
+		rowsAffected, _ := res.RowsAffected()
+		if err != nil || rowsAffected != 1 {
+			tx.Rollback()
+			if err != nil {
+				return "", err
+			}
+			return "", errors.New("insufficient coins to claim this item ")
+		}
+		res, err = tx.Exec(`UPDATE items SET available = available -1 WHERE id = ? `, item_id)
+		rowsAffected, _ = res.RowsAffected()
+		if err != nil || rowsAffected != 1 {
+			tx.Rollback()
+			if err != nil {
+				return "", err
+			}
+			return "", errors.New("error occured while transaction please try later ")
+		}
+
+		_, err = tx.Exec(`UPDATE redeems SET status = $1 where id = $2`, action, request_id)
+		if err != nil {
+			tx.Rollback()
+			log.Fatal(err)
+			return "", err
+		}
+		if err = tx.Commit(); err != nil {
+			return "", err
+		}
+		return "Item redeemed sucessfully", nil
+	}
+	if action == "reject" {
+		_, err = database.Db.Exec(`UPDATE redeems SET status = $1 where id = $2`, action, request_id)
+		if err != nil {
+			return "error", err
+		}
+		return "Request rejected", nil
+
+	}
+	e := errors.New("you may only accept or reject ")
+	return "", e
+}
